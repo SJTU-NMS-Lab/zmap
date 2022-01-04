@@ -1,0 +1,3 @@
+real-time,time-elapsed,time-remaining,percent-complete,hit-rate,active-send-threads,sent-total,sent-last-one-sec,sent-avg-per-sec,recv-success-total,recv-success-last-one-sec,recv-success-avg-per-sec,recv-total,recv-total-last-one-sec,recv-total-avg-per-sec,pcap-drop-total,drop-last-one-sec,drop-avg-per-sec,sendto-fail-total,sendto-fail-last-one-sec,sendto-fail-avg-per-sec
+2021-10-02 21:58:29,0,0,0.000000,0.000000,1,0,0,0,0,0,0,1,0,20,0,0,0,0,0,0
+2021-10-02 21:58:30,1,46,2.214787,0.000000,1,39957,39948,38013,0,0,0,4,3,4,0,0,0,0,0,0
