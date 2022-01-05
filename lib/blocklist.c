@@ -90,6 +90,11 @@ static void _add_constraint(struct in_addr addr, int prefix_len, int value)
 	}
 }
 
+static void _add_constraint_alive_ips(struct in_addr addr, int prefix_len, int value)
+{
+	constraint_set(constraint, ntohl(addr.s_addr), prefix_len, value);
+}
+
 // blocklist a CIDR network allocation
 // e.g. blocklist_add("128.255.134.0", 24)
 void blocklist_prefix(char *ip, int prefix_len)
@@ -159,6 +164,58 @@ static int init_from_string(char *ip, int value)
 	return ret;
 }
 
+static int init_from_string_alive_ips(char *ip, int value)
+{
+	int prefix_len = 32;
+	char *slash = strchr(ip, '/');
+	if (slash) { // split apart network and prefix length
+		*slash = '\0';
+		char *end;
+		char *len = slash + 1;
+		errno = 0;
+		prefix_len = strtol(len, &end, 10);
+		if (end == len || errno != 0 || prefix_len < 0 ||
+		    prefix_len > 32) {
+			log_fatal("constraint",
+				  "'%s' is not a valid prefix length", len);
+			return -1;
+		}
+	}
+	struct in_addr addr;
+	int ret = -1;
+	if (inet_aton(ip, &addr) == 0) {
+		// Not an IP and not a CIDR block, try dns resolution
+		struct addrinfo hint, *res;
+		memset(&hint, 0, sizeof(hint));
+		hint.ai_family = PF_INET;
+		int r = getaddrinfo(ip, NULL, &hint, &res);
+		if (r) {
+			log_error("constraint",
+				  "'%s' is not a valid IP "
+				  "address or hostname",
+				  ip);
+			return -1;
+		}
+		// Got some addrinfo, let's see what happens
+		for (struct addrinfo *aip = res; aip; aip = aip->ai_next) {
+			if (aip->ai_family != AF_INET) {
+				continue;
+			}
+			struct sockaddr_in *sa =
+			    (struct sockaddr_in *)aip->ai_addr;
+			memcpy(&addr, &sa->sin_addr, sizeof(addr));
+			log_debug("constraint", "%s retrieved by hostname",
+				  inet_ntoa(addr));
+			ret = 0;
+			_add_constraint_alive_ips(addr, prefix_len, value);
+		}
+	} else {
+		_add_constraint_alive_ips(addr, prefix_len, value);
+		return 0;
+	}
+	return ret;
+}
+
 static int init_from_file(char *file, const char *name, int value,
 			  int ignore_invalid_hosts)
 {
@@ -182,6 +239,40 @@ static int init_from_file(char *file, const char *name, int value,
 			continue;
 		}
 		if (init_from_string(ip, value)) {
+			if (!ignore_invalid_hosts) {
+				log_fatal(name, "unable to parse %s file: %s",
+					  name, file);
+			}
+		}
+	}
+	fclose(fp);
+
+	return 0;
+}
+
+static int init_from_file_alive_ips(char *file, const char *name, int value,
+			  int ignore_invalid_hosts)
+{
+	FILE *fp;
+	char line[1000];
+
+	fp = fopen(file, "r");
+	if (fp == NULL) {
+		log_fatal(name, "unable to open %s file: %s: %s", name, file,
+			  strerror(errno));
+	}
+
+	while (fgets(line, sizeof(line), fp) != NULL) {
+		char *comment = strchr(line, '#');
+		if (comment) {
+			*comment = '\0';
+		}
+		// hostnames can be up to 255 bytes
+		char ip[256];
+		if ((sscanf(line, "%256s", ip)) == EOF) {
+			continue;
+		}
+		if (init_from_string_alive_ips(ip, value)) {
 			if (!ignore_invalid_hosts) {
 				log_fatal(name, "unable to parse %s file: %s",
 					  name, file);
@@ -250,6 +341,74 @@ int blocklist_init(char *allowlist_filename, char *blocklist_filename,
 		if (allowlist_filename) {
 			init_from_file(allowlist_filename, "allowlist",
 				       ADDR_ALLOWED, ignore_invalid_hosts);
+		}
+		if (allowlist_entries) {
+			init_from_array(allowlist_entries,
+					allowlist_entries_len, ADDR_ALLOWED,
+					ignore_invalid_hosts);
+		}
+	} else {
+		// no allowlist, so default to allowing everything
+		log_debug("blocklist",
+			  "no allowlist file or allowlist entries provided");
+		constraint = constraint_init(ADDR_ALLOWED);
+	}
+	if (blocklist_filename) {
+		init_from_file(blocklist_filename, "blocklist", ADDR_DISALLOWED,
+			       ignore_invalid_hosts);
+	}
+	if (blocklist_entries) {
+		init_from_array(blocklist_entries, blocklist_entries_len,
+				ADDR_DISALLOWED, ignore_invalid_hosts);
+	}
+	init_from_string(strdup("0.0.0.0"), ADDR_DISALLOWED);
+	constraint_paint_value(constraint, ADDR_ALLOWED);
+	uint64_t allowed = blocklist_count_allowed();
+	log_debug("constraint",
+		  "%lu addresses (%0.0f%% of address "
+		  "space) can be scanned",
+		  allowed, allowed * 100. / ((long long int)1 << 32));
+	if (!allowed) {
+		log_error("blocklist",
+			  "no addresses are eligible to be scanned in the "
+			  "current configuration. This may be because the "
+			  "blocklist being used by ZMap (%s) prevents "
+			  "any addresses from receiving probe packets.",
+			  blocklist_filename);
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+
+// Initialize address constraints from allowlist and blocklist files.
+// Either can be set to NULL to omit.
+int blocklist_init_with_alive_ips(char *allowlist_filename, char *blocklist_filename,
+		   char **allowlist_entries, size_t allowlist_entries_len,
+		   char **blocklist_entries, size_t blocklist_entries_len,
+		   int ignore_invalid_hosts, char *alivelist_filename)
+{
+	assert(!constraint);
+
+	blocklisted_cidrs = xcalloc(1, sizeof(bl_ll_t));
+	allowlisted_cidrs = xcalloc(1, sizeof(bl_ll_t));
+
+	if (allowlist_filename && allowlist_entries) {
+		log_warn("allowlist",
+			 "both a allowlist file and destination addresses "
+			 "were specified. The union of these two sources "
+			 "will be utilized.");
+	}
+	if (allowlist_filename || (allowlist_entries_len > 0) || alivelist_filename ) {
+		// using a allowlist, so default to allowing nothing
+		constraint = constraint_init(ADDR_DISALLOWED);
+		log_debug("constraint", "blocklisting 0.0.0.0/0");
+		if (allowlist_filename) {
+			init_from_file(allowlist_filename, "allowlist",
+				       ADDR_ALLOWED, ignore_invalid_hosts);
+		}
+		if (alivelist_filename) {
+			init_from_file_alive_ips(alivelist_filename, "alivelist",
+					ADDR_ALLOWED, ignore_invalid_hosts);
 		}
 		if (allowlist_entries) {
 			init_from_array(allowlist_entries,

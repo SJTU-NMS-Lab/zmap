@@ -807,9 +807,9 @@ int main(int argc, char *argv[])
 	}
 
 	// blocklist
-	if (blocklist_init(zconf.allowlist_filename, zconf.blocklist_filename,
+	if (blocklist_init_with_alive_ips(zconf.allowlist_filename, zconf.blocklist_filename,
 			   zconf.destination_cidrs, zconf.destination_cidrs_len,
-			   NULL, 0, zconf.ignore_invalid_hosts)) {
+			   NULL, 0, zconf.ignore_invalid_hosts, zconf.allowlist_filename)) {
 		log_fatal("zmap", "unable to initialize blocklist / allowlist");
 	}
 

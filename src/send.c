@@ -647,63 +647,7 @@ int send_run_separate(sock_t st, shard_t *s)
 				    s->thread_id, s->state.max_packets);
 				goto cleanup;
 			}
-			if (packet_stream < zconf.packet_streams) {
-				count++;
-				uint32_t src_ip = get_src_ip(current_ip, packet_stream);
-				uint32_t validation[VALIDATE_BYTES /
-						    sizeof(uint32_t)];
-				validate_gen(src_ip, current_ip,
-					     (uint8_t *)validation);
-				uint8_t ttl = zconf.probe_ttl;
-				size_t length = 0;
-				zconf.probe_module->make_packet(
-				    buf, &length, src_ip, current_ip, ttl,
-				    validation, packet_stream, probe_data);
-				if (length > MAX_PACKET_SIZE) {
-					log_fatal(
-					    "send",
-					    "send thread %hhu set length (%zu) larger than MAX (%zu)",
-					    s->thread_id, length,
-					    MAX_PACKET_SIZE);
-				}
-				if (zconf.dryrun) {
-					lock_file(stdout);
-					zconf.probe_module->print_packet(stdout,
-									 buf);
-					unlock_file(stdout);
-				} else {
-					void *contents =
-					    buf +
-					    zconf.send_ip_pkts *
-						sizeof(struct ether_header);
-					length -= (zconf.send_ip_pkts *
-						   sizeof(struct ether_header));
-					int any_sends_successful = 0;
-					for (int i = 0; i < attempts; ++i) {
-						int rc = send_packet(
-						    st, contents, length, idx);
-						if (rc < 0) {
-							struct in_addr addr;
-							addr.s_addr = current_ip;
-							char addr_str_buf[INET_ADDRSTRLEN];
-							const char *addr_str = inet_ntop(AF_INET, &addr, addr_str_buf, INET_ADDRSTRLEN);
-							if (addr_str != NULL) {
-								log_debug("send", "send_packet failed for %s. %s", addr_str, strerror(errno));
-							}
-						} else {
-							any_sends_successful = 1;
-							break;
-						}
-					}
-					if (!any_sends_successful) {
-						s->state.packets_failed++;
-					}
-					idx++;
-					idx &= 0xFF;
-				}
-				s->state.packets_sent++;
-				packet_stream ++;
-			} else {
+			if (packet_stream >= zconf.packet_streams) {
 				packet_stream = 0;
 				// Track the number of hosts we actually scanned.
 				s->state.hosts_scanned++;
@@ -727,6 +671,61 @@ int send_run_separate(sock_t st, shard_t *s)
 					}
 				}
 			}
+			count++;
+			uint32_t src_ip = get_src_ip(current_ip, packet_stream);
+			uint32_t validation[VALIDATE_BYTES /
+						sizeof(uint32_t)];
+			validate_gen(src_ip, current_ip,
+					(uint8_t *)validation);
+			uint8_t ttl = zconf.probe_ttl;
+			size_t length = 0;
+			zconf.probe_module->make_packet(
+				buf, &length, src_ip, current_ip, ttl,
+				validation, packet_stream, probe_data);
+			if (length > MAX_PACKET_SIZE) {
+				log_fatal(
+					"send",
+					"send thread %hhu set length (%zu) larger than MAX (%zu)",
+					s->thread_id, length,
+					MAX_PACKET_SIZE);
+			}
+			if (zconf.dryrun) {
+				lock_file(stdout);
+				zconf.probe_module->print_packet(stdout,
+									buf);
+				unlock_file(stdout);
+			} else {
+				void *contents =
+					buf +
+					zconf.send_ip_pkts *
+					sizeof(struct ether_header);
+				length -= (zconf.send_ip_pkts *
+						sizeof(struct ether_header));
+				int any_sends_successful = 0;
+				for (int i = 0; i < attempts; ++i) {
+					int rc = send_packet(
+						st, contents, length, idx);
+					if (rc < 0) {
+						struct in_addr addr;
+						addr.s_addr = current_ip;
+						char addr_str_buf[INET_ADDRSTRLEN];
+						const char *addr_str = inet_ntop(AF_INET, &addr, addr_str_buf, INET_ADDRSTRLEN);
+						if (addr_str != NULL) {
+							log_debug("send", "send_packet failed for %s. %s", addr_str, strerror(errno));
+						}
+					} else {
+						any_sends_successful = 1;
+						break;
+					}
+				}
+				if (!any_sends_successful) {
+					s->state.packets_failed++;
+				}
+				idx++;
+				idx &= 0xFF;
+			}
+			s->state.packets_sent++;
+			packet_stream ++;
 		}
 	}
 cleanup:
