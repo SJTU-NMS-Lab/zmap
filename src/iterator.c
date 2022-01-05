@@ -56,7 +56,7 @@ void shard_complete(uint8_t thread_id, void *arg)
 	pthread_mutex_unlock(&it->mutex);
 }
 
-iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,					// Que: who's this given integer shard?, together with the given num_shards?
+iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
 			  uint16_t num_shards)
 {
 	uint64_t num_addrs = blocklist_count_allowed();

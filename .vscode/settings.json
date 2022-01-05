@@ -12,6 +12,7 @@
 		"includes.h": "c",
 		"module_udp.h": "c",
 		"fieldset.h": "c",
-		"constraint.h": "c"
+		"constraint.h": "c",
+		"zopt.h": "c"
 	}
 }

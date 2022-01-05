@@ -96,6 +96,7 @@ struct state_conf {
 	char *output_filename;
 	char *blocklist_filename;
 	char *allowlist_filename;
+	char *alive_ips_filename;
 	char *list_of_ips_filename;
 	uint32_t list_of_ips_count;
 	char *metadata_filename;

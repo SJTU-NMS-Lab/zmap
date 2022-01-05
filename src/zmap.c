@@ -662,6 +662,7 @@ int main(int argc, char *argv[])
 		    "editing the default ZMap configuration at /etc/zmap/zmap.conf.");
 	}
 	SET_IF_GIVEN(zconf.allowlist_filename, allowlist_file);
+	SET_IF_GIVEN(zconf.alive_ips_filename, alive_ips_file);
 
 	if (zconf.probe_module->port_args) {
 		if (args.source_port_given) {
@@ -811,6 +812,7 @@ int main(int argc, char *argv[])
 			   NULL, 0, zconf.ignore_invalid_hosts)) {
 		log_fatal("zmap", "unable to initialize blocklist / allowlist");
 	}
+
 	// if there's a list of ips to scan, then initialize PBM and populate
 	// it based on the provided file
 	if (zconf.list_of_ips_filename) {
