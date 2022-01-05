@@ -68,6 +68,8 @@ typedef struct node {
 	struct node *r;
 	value_t value;
 	uint64_t count;
+	uint32_t *alive;
+	size_t alive_len;
 } node_t;
 
 // As an optimization, we precompute lookups for every prefix of this
@@ -94,6 +96,8 @@ static node_t *_create_leaf(value_t value)
 	node->l = NULL;
 	node->r = NULL;
 	node->value = value;
+	node->alive = NULL;
+	node->alive_len = 0;
 	return node;
 }
 
@@ -104,6 +108,10 @@ static void _destroy_subtree(node_t *node)
 		return;
 	_destroy_subtree(node->l);
 	_destroy_subtree(node->r);
+	if (node->alive != NULL) {
+		free(node->alive);
+		node->alive = NULL;
+	}
 	free(node);
 }
 
@@ -112,6 +120,18 @@ static void _convert_to_leaf(node_t *node)
 {
 	assert(node);
 	assert(!IS_LEAF(node));
+	if (!IS_LEAF(node->l)) {
+		_convert_to_leaf(node->l);
+	}
+	if (!IS_LEAF(node->r)) {
+		_convert_to_leaf(node->r);
+	}
+	node->alive_len = node->r->alive_len + node->l->alive_len;
+	if (node->alive_len) {
+		node->alive = (uint32_t*)xcalloc(node->alive_len, sizeof(uint32_t));	// TODO: should allocate more memory
+		memcpy(node->alive, node->l->alive, node->l->alive_len);
+		memcpy((node->alive + node->l->alive_len), node->r->alive, node->r->alive_len);
+	}
 	_destroy_subtree(node->l);
 	_destroy_subtree(node->r);
 	node->l = NULL;
@@ -176,6 +196,40 @@ void constraint_set(constraint_t *con, uint32_t prefix, int len, value_t value)
 {
 	assert(con);
 	_set_recurse(con->root, prefix, len, value);
+	con->painted = 0;
+}
+
+// Recursive function to set value for a given network prefix within
+// the tree.  (Note: prefix must be in host byte order.)
+static void _add_recurse_alive_ip(node_t *node, uint32_t prefix, int len, value_t value)
+{
+	assert(node);
+	assert(0 <= len && len <= 256);
+	if (IS_LEAF(node)) {
+		if ((node->value == value)) {
+			node->alive_len ++;
+			node->alive = xrealloc(node->alive, (sizeof(uint32_t) * node->alive_len));	// TODO: instead of realloc 1 uint32_t every times the list gets larger, realloc a block of memory every time
+			node->alive[(node->alive_len - 1)] = prefix;
+			node->alive_len ++;
+		}
+		return;
+	}
+
+	// We're not at the end of the prefix, and we're at an internal
+	// node.  Recurse on the left or right subtree.
+	assert(len > 0);
+	uint32_t filter = 1 << (len - 1);
+	if (prefix & filter) {
+		_add_recurse_alive_ip(node->r, prefix, len - 1, value);
+	} else {
+		_add_recurse_alive_ip(node->l, prefix, len - 1, value);
+	}
+}
+
+void constraint_add_alive_ip(constraint_t *con, uint32_t prefix, value_t value)
+{
+	assert(con);
+	_add_recurse_alive_ip(con->root, prefix, 32, value);		// 32 represents the total length of the prefix, indicating the prefix is actually an ip address
 	con->painted = 0;
 }
 
@@ -257,6 +311,27 @@ uint32_t constraint_lookup_index(constraint_t *con, uint64_t index,
 	return _lookup_index(con->root, index);
 }
 
+// Return the nth painted IP address.
+static int _lookup_index_alive_ip(node_t *root, uint64_t n)
+{
+	assert(root);
+	node_t *node = root;
+	uint32_t mask = 0x80000000;
+	for (;;) {
+		if (IS_LEAF(node)) {
+			assert(n < node->alive_len);
+			return node->alive[n];
+		}
+		if (n < node->l->count) {
+			node = node->l;
+		} else {
+			n -= node->l->count;
+			node = node->r;
+		}
+		mask >>= 1;
+	}
+}
+
 // Implement count_ips by recursing on halves of the tree.  Size represents
 // the number of addresses in a prefix at the current level of the tree.
 // If paint is specified, each node will have its count set to the number of
@@ -283,6 +358,35 @@ static uint64_t _count_ips_recurse(node_t *node, value_t value, uint64_t size,
 		n = _count_ips_recurse(node->l, value, size >> 1, paint,
 				       exclude_radix) +
 		    _count_ips_recurse(node->r, value, size >> 1, paint,
+				       exclude_radix);
+	}
+	if (paint) {
+		node->count = n;
+	}
+	return n;
+}
+
+// Implement count_ips by recursing on halves of the tree.  Size represents
+// the number of addresses in a prefix at the current level of the tree.
+// If paint is specified, each node will have its count set to the number of
+// leaves under it set to value.
+// If exclude_radix is specified, the number of addresses will exlcude prefixes
+// that are a /RADIX_LENGTH or larger
+static uint64_t _count_ips_recurse_alive_ip(node_t *node, value_t value,
+				   int paint, int exclude_radix)
+{
+	assert(node);
+	uint64_t n;
+	if (IS_LEAF(node)) {
+		if (node->value == value) {
+			n = node->alive_len;
+		} else {
+			n = 0;
+		}
+	} else {
+		n = _count_ips_recurse_alive_ip(node->l, value, paint,
+				       exclude_radix) +
+		    _count_ips_recurse_alive_ip(node->r, value, paint,
 				       exclude_radix);
 	}
 	if (paint) {
@@ -318,6 +422,25 @@ static node_t *_lookup_node(node_t *root, uint32_t prefix, int len)
 	return node;
 }
 
+// For a given value, return the IP address with zero-based index n.
+// (i.e., if there are three addresses with value 0xFF, looking up index 1
+// will return the second one).
+// Note that the tree must have been previously painted with this value.
+uint32_t constraint_lookup_index_alive_ip(constraint_t *con, uint64_t index,
+				 value_t value)
+{
+	assert(con);
+	if (!con->painted || con->paint_value != value) {
+		constraint_paint_value_alive_ip(con, value);
+	}
+
+	// Otherwise, do the "slow" lookup in tree.
+	// Note that tree counts do NOT include things in the radix,
+	// so we subtract these off here.
+	assert(index < con->root->count);
+	return _lookup_index_alive_ip(con->root, index);
+}
+
 // For each node, precompute the count of leaves beneath it set to value.
 // Note that the tree can be painted for only one value at a time.
 void constraint_paint_value(constraint_t *con, value_t value)
@@ -346,6 +469,23 @@ void constraint_paint_value(constraint_t *con, value_t value)
 	con->paint_value = value;
 }
 
+// For each node, precompute the count of leaves beneath it set to value.
+// Note that the tree can be painted for only one value at a time.
+void constraint_paint_value_alive_ip(constraint_t *con, value_t value)
+{
+	assert(con);
+	log_debug("constraint", "Painting value %lu", value);
+
+	// Paint everything except what we will put in radix
+	_count_ips_recurse_alive_ip(con->root, value, 1, 1);
+
+	log_debug("constraint", "%lu IPs in radix array, %lu IPs in tree",
+		  con->radix_len * (1 << (32 - RADIX_LENGTH)),
+		  con->root->count);
+	con->painted = 1;
+	con->paint_value = value;
+}
+
 // Return the number of addresses that have a given value.
 uint64_t constraint_count_ips(constraint_t *con, value_t value)
 {
@@ -355,6 +495,18 @@ uint64_t constraint_count_ips(constraint_t *con, value_t value)
 		       con->radix_len * (1 << (32 - RADIX_LENGTH));
 	} else {
 		return _count_ips_recurse(con->root, value, (uint64_t)1 << 32,
+					  0, 0);
+	}
+}
+
+// Return the number of addresses that have a given value.
+uint64_t constraint_count_ips_alive_ip(constraint_t *con, value_t value)
+{
+	assert(con);
+	if (con->painted && con->paint_value == value) {
+		return con->root->count;
+	} else {
+		return _count_ips_recurse_alive_ip(con->root, value,
 					  0, 0);
 	}
 }
@@ -389,6 +541,7 @@ static uint32_t _lookup_ip_subnet(node_t *root, uint32_t address, int *prefix_le
 	node_t *node = root;
 	uint32_t mask = (0x80000000)>>(*prefix_len);
 	if (IS_LEAF(node)) {
+		assert(node->value);
 		if (address & mask) {
 			*next_digit = 1;
 		} else {

@@ -90,9 +90,9 @@ static void _add_constraint(struct in_addr addr, int prefix_len, int value)
 	}
 }
 
-static void _add_constraint_alive_ips(struct in_addr addr, int prefix_len, int value)
+static void _add_constraint_alive_ips(struct in_addr addr, int value)
 {
-	constraint_set(constraint, ntohl(addr.s_addr), prefix_len, value);
+	constraint_add_alive_ip(constraint, ntohl(addr.s_addr), value);
 }
 
 // blocklist a CIDR network allocation
@@ -166,52 +166,16 @@ static int init_from_string(char *ip, int value)
 
 static int init_from_string_alive_ips(char *ip, int value)
 {
-	int prefix_len = 32;
-	char *slash = strchr(ip, '/');
-	if (slash) { // split apart network and prefix length
-		*slash = '\0';
-		char *end;
-		char *len = slash + 1;
-		errno = 0;
-		prefix_len = strtol(len, &end, 10);
-		if (end == len || errno != 0 || prefix_len < 0 ||
-		    prefix_len > 32) {
-			log_fatal("constraint",
-				  "'%s' is not a valid prefix length", len);
-			return -1;
-		}
-	}
 	struct in_addr addr;
 	int ret = -1;
 	if (inet_aton(ip, &addr) == 0) {
-		// Not an IP and not a CIDR block, try dns resolution
-		struct addrinfo hint, *res;
-		memset(&hint, 0, sizeof(hint));
-		hint.ai_family = PF_INET;
-		int r = getaddrinfo(ip, NULL, &hint, &res);
-		if (r) {
-			log_error("constraint",
-				  "'%s' is not a valid IP "
-				  "address or hostname",
-				  ip);
-			return -1;
-		}
-		// Got some addrinfo, let's see what happens
-		for (struct addrinfo *aip = res; aip; aip = aip->ai_next) {
-			if (aip->ai_family != AF_INET) {
-				continue;
-			}
-			struct sockaddr_in *sa =
-			    (struct sockaddr_in *)aip->ai_addr;
-			memcpy(&addr, &sa->sin_addr, sizeof(addr));
-			log_debug("constraint", "%s retrieved by hostname",
-				  inet_ntoa(addr));
-			ret = 0;
-			_add_constraint_alive_ips(addr, prefix_len, value);
-		}
+		log_error("constraint",
+			  "'%s' is not a valid IP "
+			  "address or hostname",
+			  ip);
 	} else {
-		_add_constraint_alive_ips(addr, prefix_len, value);
-		return 0;
+		_add_constraint_alive_ips(addr, value);
+		ret = 0;
 	}
 	return ret;
 }

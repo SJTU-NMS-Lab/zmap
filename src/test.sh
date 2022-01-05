@@ -48,7 +48,7 @@ path="/home/qi/Documents/probing/output"
 output_file="$path/rtt_$which"
 log_file="$path/log_$which"
 error_file="$path/error_$which"
-sudo ./zmap 	 -w allowlist -M udp --probe-args=latency:00 -r $rate -P $per_ip --batch=$batch	-p 1434 -u $log_file --output-file=$output_file --output-module=csv --output-fields="icmp_responder,saddr,icmp_type,icmp_code,icmp_timestamp,icmp_elapsed,icmp_rtt,icmp_subnet,icmp_subnet_len,icmp_next_digit" --metadata-file=metadata > $error_file
+sudo ./zmap 	 -a alivelist -w allowlist -M udp --probe-args=latency:00 -r $rate -P $per_ip --batch=$batch	-p 1434 -u $log_file --output-file=$output_file --output-module=csv --output-fields="icmp_responder,saddr,icmp_type,icmp_code,icmp_timestamp,icmp_elapsed,icmp_rtt,icmp_subnet,icmp_subnet_len,icmp_next_digit" --metadata-file=metadata > $error_file
 
 
 
