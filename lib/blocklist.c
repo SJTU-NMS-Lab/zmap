@@ -241,7 +241,7 @@ static int init_from_file_alive_ips(char *file, const char *name, int value,
 				log_fatal(name, "unable to parse %s file: %s",
 					  name, file);
 			}
-		}
+		} 
 	}
 	fclose(fp);
 
@@ -393,7 +393,7 @@ int blocklist_init_with_alive_ips(char *allowlist_filename, char *blocklist_file
 		init_from_array(blocklist_entries, blocklist_entries_len,
 				ADDR_DISALLOWED, ignore_invalid_hosts);
 	}
-	init_from_string(strdup("0.0.0.0"), ADDR_DISALLOWED);
+	init_from_string(strdup("0.0.0.0"), ADDR_DISALLOWED);		// TODO: ban radix behavior
 	constraint_paint_value(constraint, ADDR_ALLOWED);
 	uint64_t allowed = blocklist_count_allowed();
 	log_debug("constraint",
