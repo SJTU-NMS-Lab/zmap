@@ -356,10 +356,10 @@ int blocklist_init_with_alive_ips(char *allowlist_filename, char *blocklist_file
 	blocklisted_cidrs = xcalloc(1, sizeof(bl_ll_t));
 	allowlisted_cidrs = xcalloc(1, sizeof(bl_ll_t));
 
-	if (allowlist_filename && allowlist_entries) {
+	if (allowlist_filename && alivelist_filename) {
 		log_warn("allowlist",
-			 "both a allowlist file and destination addresses "
-			 "were specified. The union of these two sources "
+			 "both a allowlist file and alive addresses "
+			 "were specified. The intersection of these two sources "
 			 "will be utilized.");
 	}
 	if (allowlist_filename || (allowlist_entries_len > 0) || alivelist_filename ) {

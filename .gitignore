@@ -38,3 +38,4 @@ src/ztests
 
 src/compact_BGP_table
 src/server_results*
+.vscode/
