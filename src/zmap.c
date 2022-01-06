@@ -822,9 +822,10 @@ int main(int argc, char *argv[])
 	}
 
 	// compute number of targets
-	uint64_t allowed = blocklist_count_allowed();
+	uint64_t allowed = blocklist_count_alive_ips();
 	zconf.total_allowed = allowed;
 	zconf.total_disallowed = blocklist_count_not_allowed();
+	log_debug("zmap", "total alive: %hu; total dead: %hu", zconf.total_allowed, zconf.total_disallowed);
 	assert(allowed <= (1LL << 32));
 	if (!zconf.total_allowed) {
 		log_fatal("zmap", "zero eligible addresses to scan");

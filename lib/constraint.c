@@ -212,8 +212,7 @@ static void _add_recurse_alive_ip(node_t *node, uint32_t prefix, int len, value_
 			node->alive_len ++;
 			node->alive = xrealloc(node->alive, (sizeof(uint32_t) * node->alive_len));	// TODO: instead of realloc 1 uint32_t every times the list gets larger, realloc a block of memory every time
 			node->alive[(node->alive_len - 1)] = prefix;
-			node->alive_len ++;
-			log_debug("constraint", "succeed to add alive ip %s", inet_ntoa(addr));
+			log_debug("constraint", "succeed to add alive ip %s at alive_len %d", inet_ntoa(addr), node->alive_len);
 		} else {
 			log_debug("constraint", "fail to add alive ip %s", inet_ntoa(addr));
 		}
@@ -372,13 +371,11 @@ static uint64_t _count_ips_recurse(node_t *node, value_t value, uint64_t size,
 }
 
 // Implement count_ips by recursing on halves of the tree.  Size represents
-// the number of addresses in a prefix at the current level of the tree.
+// the number of alive ips under a prefix.
 // If paint is specified, each node will have its count set to the number of
 // leaves under it set to value.
-// If exclude_radix is specified, the number of addresses will exlcude prefixes
-// that are a /RADIX_LENGTH or larger
 static uint64_t _count_ips_recurse_alive_ip(node_t *node, value_t value,
-				   int paint, int exclude_radix)
+				   int paint)
 {
 	assert(node);
 	uint64_t n;
@@ -389,10 +386,8 @@ static uint64_t _count_ips_recurse_alive_ip(node_t *node, value_t value,
 			n = 0;
 		}
 	} else {
-		n = _count_ips_recurse_alive_ip(node->l, value, paint,
-				       exclude_radix) +
-		    _count_ips_recurse_alive_ip(node->r, value, paint,
-				       exclude_radix);
+		n = _count_ips_recurse_alive_ip(node->l, value, paint) +
+		    _count_ips_recurse_alive_ip(node->r, value, paint);
 	}
 	if (paint) {
 		node->count = n;
@@ -439,9 +434,6 @@ uint32_t constraint_lookup_index_alive_ip(constraint_t *con, uint64_t index,
 		constraint_paint_value_alive_ip(con, value);
 	}
 
-	// Otherwise, do the "slow" lookup in tree.
-	// Note that tree counts do NOT include things in the radix,
-	// so we subtract these off here.
 	assert(index < con->root->count);
 	return _lookup_index_alive_ip(con->root, index);
 }
@@ -481,12 +473,10 @@ void constraint_paint_value_alive_ip(constraint_t *con, value_t value)
 	assert(con);
 	log_debug("constraint", "Painting value %lu", value);
 
-	// Paint everything except what we will put in radix
-	_count_ips_recurse_alive_ip(con->root, value, 1, 1);
+	// Paint everything, nothing to put in radix
+	_count_ips_recurse_alive_ip(con->root, value, 1);
 
-	log_debug("constraint", "%lu IPs in radix array, %lu IPs in tree",
-		  con->radix_len * (1 << (32 - RADIX_LENGTH)),
-		  con->root->count);
+	log_debug("constraint", "%lu IPs in tree", con->root->count);
 	con->painted = 1;
 	con->paint_value = value;
 }
@@ -512,7 +502,7 @@ uint64_t constraint_count_ips_alive_ip(constraint_t *con, value_t value)
 		return con->root->count;
 	} else {
 		return _count_ips_recurse_alive_ip(con->root, value,
-					  0, 0);
+					  0);
 	}
 }
 

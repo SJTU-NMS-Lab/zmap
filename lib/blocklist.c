@@ -61,7 +61,7 @@ bl_cidr_node_t *get_allowlisted_cidrs(void) { return allowlisted_cidrs->first; }
 
 uint32_t blocklist_lookup_index(uint64_t index)
 {
-	return ntohl(constraint_lookup_index(constraint, index, ADDR_ALLOWED));
+	return ntohl(constraint_lookup_index_alive_ip(constraint, index, ADDR_ALLOWED));
 }
 
 uint32_t blocklist_lookup_ip_subnet (uint32_t address, int *prefix_len, int *next_digit)			// modified
@@ -266,10 +266,22 @@ uint64_t blocklist_count_allowed(void)
 	return constraint_count_ips(constraint, ADDR_ALLOWED);
 }
 
+uint64_t blocklist_count_alive_ips(void)
+{
+	assert(constraint);
+	return constraint_count_ips_alive_ip(constraint, ADDR_ALLOWED);
+}
+
 uint64_t blocklist_count_not_allowed(void)
 {
 	assert(constraint);
 	return constraint_count_ips(constraint, ADDR_DISALLOWED);
+}
+
+uint64_t blocklist_count_not_alive_ips(void)
+{
+	assert(constraint);
+	return constraint_count_ips_alive_ip(constraint, ADDR_DISALLOWED);
 }
 
 // network order
@@ -393,9 +405,9 @@ int blocklist_init_with_alive_ips(char *allowlist_filename, char *blocklist_file
 		init_from_array(blocklist_entries, blocklist_entries_len,
 				ADDR_DISALLOWED, ignore_invalid_hosts);
 	}
-	init_from_string(strdup("0.0.0.0"), ADDR_DISALLOWED);		// TODO: ban radix behavior
-	constraint_paint_value(constraint, ADDR_ALLOWED);
-	uint64_t allowed = blocklist_count_allowed();
+	init_from_string(strdup("0.0.0.0"), ADDR_DISALLOWED);		// TODO: usage?
+	constraint_paint_value_alive_ip(constraint, ADDR_ALLOWED);
+	uint64_t allowed = blocklist_count_alive_ips();
 	log_debug("constraint",
 		  "%lu addresses (%0.0f%% of address "
 		  "space) can be scanned",

@@ -59,7 +59,7 @@ void shard_complete(uint8_t thread_id, void *arg)
 iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
 			  uint16_t num_shards)
 {
-	uint64_t num_addrs = blocklist_count_allowed();
+	uint64_t num_addrs = blocklist_count_alive_ips();
 	uint64_t group_min_size = num_addrs;
 	if (zconf.list_of_ips_filename) {
 		log_debug("send", "forcing max group size for compatibility with -I");

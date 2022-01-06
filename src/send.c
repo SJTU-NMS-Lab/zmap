@@ -550,6 +550,9 @@ int send_run_separate(sock_t st, shard_t *s)
 	}
 	// Get the initial IP to scan.
 	uint32_t current_ip = shard_get_cur_ip(s);
+	struct in_addr addr;
+	addr.s_addr = current_ip;
+	log_debug("send.c", "1 th ip to scan: %s", inet_ntoa(addr));
 
 	// If provided a list of IPs to scan, then the first generated address
 	// might not be on that list. Iterate until the current IP is one the
@@ -624,29 +627,6 @@ int send_run_separate(sock_t st, shard_t *s)
 		for (int b = 0; b < zconf.batch; b++) {							// batch specify how many ip addresses to probe between two adjusting points
 			// Check if we've finished this shard or thread before sending each
 			// packet, regardless of batch size.
-			if (s->state.max_hosts &&
-			    s->state.hosts_scanned >= s->state.max_hosts) {
-				log_debug(
-				    "send",
-				    "send thread %hhu finished (max targets of %u reached)",
-				    s->thread_id, s->state.max_hosts);
-				goto cleanup;
-			}
-			if (current_ip == ZMAP_SHARD_DONE) {
-				log_debug(
-				    "send",
-				    "send thread %hhu finished, shard depleted",
-				    s->thread_id);
-				goto cleanup;
-			}
-			if (s->state.max_packets &&
-			    s->state.packets_sent >= s->state.max_packets) {
-				log_debug(
-				    "send",
-				    "send thread %hhu finished (max packets of %u reached)",
-				    s->thread_id, s->state.max_packets);
-				goto cleanup;
-			}
 			if (packet_stream >= zconf.packet_streams) {
 				packet_stream = 0;
 				// Track the number of hosts we actually scanned.
@@ -670,6 +650,31 @@ int send_run_separate(sock_t st, shard_t *s)
 						}
 					}
 				}
+				addr.s_addr = current_ip;
+				log_debug("send.c", "%d th ip to scan: %s", (s->state.hosts_scanned + 1), inet_ntoa(addr));
+			}
+			if (s->state.max_hosts &&
+			    s->state.hosts_scanned >= s->state.max_hosts) {
+				log_debug(
+				    "send",
+				    "send thread %hhu finished (max targets of %u reached)",
+				    s->thread_id, s->state.max_hosts);
+				goto cleanup;
+			}
+			if (current_ip == ZMAP_SHARD_DONE) {
+				log_debug(
+				    "send",
+				    "send thread %hhu finished, shard depleted",
+				    s->thread_id);
+				goto cleanup;
+			}
+			if (s->state.max_packets &&
+			    s->state.packets_sent >= s->state.max_packets) {
+				log_debug(
+				    "send",
+				    "send thread %hhu finished (max packets of %u reached)",
+				    s->thread_id, s->state.max_packets);
+				goto cleanup;
 			}
 			count++;
 			uint32_t src_ip = get_src_ip(current_ip, packet_stream);

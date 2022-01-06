@@ -45,8 +45,10 @@ int blocklist_init_with_alive_ips(char *allowlist, char *blocklist, char **allow
 		   char *alivelist);
 
 uint64_t blocklist_count_allowed();
+uint64_t blocklist_count_alive_ips();
 
 uint64_t blocklist_count_not_allowed();
+uint64_t blocklist_count_not_alive_ips();
 
 uint32_t blocklist_ip_to_index(uint32_t ip);
 
