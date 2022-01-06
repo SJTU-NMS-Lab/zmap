@@ -279,8 +279,8 @@ void fs_populate_icmp_from_iphdr_latency(struct ip *ip, size_t len, fieldset_t *
 
 			struct udphdr *udp_header = (struct udphdr *) ((char *)ip_inner + 4 * ip_inner->ip_hl);
 			// printf("received sport %d; dport: %d; len %d; cksum %d; \n", udp_header->uh_sport, udp_header->uh_dport, udp_header->uh_ulen, udp_header->uh_sum);
-			int timestamp = udp_header->check;
-			int payloadlen = ntohs(udp_header->len) - (uint16_t)sizeof(struct udphdr);
+			int timestamp = udp_header->uh_sum;
+			int payloadlen = ntohs(udp_header->uh_ulen) - (uint16_t)sizeof(struct udphdr);
 			if (payloadlen > 0) {
 				timestamp += (payloadlen - 0) << 16;
 			}
@@ -291,7 +291,7 @@ void fs_populate_icmp_from_iphdr_latency(struct ip *ip, size_t len, fieldset_t *
 			int rtt = 0;
 			if (elapsed >= timestamp) {
 				rtt = elapsed - timestamp;
-			} else if (udp_header->check == 0xffff) {
+			} else if (udp_header->uh_sum== 0xffff) {
 				timestamp = (payloadlen - 2 ) << 16;
 				rtt = elapsed - timestamp;
 			} else {
