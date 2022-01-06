@@ -16,3 +16,6 @@
 		- add function *blocklist_lookup_ip_subnet*
 	- lib/constraint.c
 		- add function *constraint_lookup_ip_subnet*
+
+# 2022-1-6
+- Modify the constraint tree structure to integrate alive ip list

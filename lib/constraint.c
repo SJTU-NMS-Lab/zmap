@@ -201,6 +201,7 @@ void constraint_set(constraint_t *con, uint32_t prefix, int len, value_t value)
 
 // Recursive function to set value for a given network prefix within
 // the tree.  (Note: prefix must be in host byte order.)
+// TODO: optimize by storing only the remained bits rather than the whole address
 static void _add_recurse_alive_ip(node_t *node, uint32_t prefix, int len, value_t value)
 {
 	assert(node);
@@ -316,6 +317,7 @@ uint32_t constraint_lookup_index(constraint_t *con, uint64_t index,
 }
 
 // Return the nth painted IP address.
+// TODO: optimize by storing only the remained bits rather than the whole address
 static int _lookup_index_alive_ip(node_t *root, uint64_t n)
 {
 	assert(root);
