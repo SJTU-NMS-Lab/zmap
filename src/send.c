@@ -351,9 +351,7 @@ int send_run(sock_t st, shard_t *s)
 		}
 
 		// Actually send a packet.
-		for (
-		    int b = 0; b < zconf.batch;
-		    b++) { // batch specify how many ip addresses to probe between two adjusting points
+		for (int b = 0; b < zconf.batch; b++) { // batch specify how many ip addresses to probe between two adjusting points
 			// Check if we've finished this shard or thread before sending each
 			// packet, regardless of batch size.
 			if (s->state.max_hosts &&
@@ -622,9 +620,7 @@ int send_run_separate(sock_t st, shard_t *s)
 		}
 
 		// Actually send a packet.
-		for (
-		    int b = 0; b < zconf.batch;
-		    b++) { // batch specify how many ip addresses to probe between two adjusting points
+		for (int b = 0; b < zconf.batch; b++) { // batch specify how many ip addresses to probe between two adjusting points
 			// Check if we've finished this shard or thread before sending each
 			// packet, regardless of batch size.
 			if (s->state.max_hosts &&
@@ -635,7 +631,7 @@ int send_run_separate(sock_t st, shard_t *s)
 				    s->thread_id, s->state.max_hosts);
 				goto cleanup;
 			}
-			if (current_ip == ZMAP_SHARD_DONE) {
+			if (current_ip == ZMAP_SHARD_DONE) {			// BUG
 				log_debug(
 				    "send",
 				    "send thread %hhu finished, shard depleted",
@@ -697,6 +693,20 @@ int send_run_separate(sock_t st, shard_t *s)
 						}
 					} else {
 						any_sends_successful = 1;
+						struct in_addr addr;
+						addr.s_addr = current_ip;
+						char addr_str_buf
+						    [INET_ADDRSTRLEN];
+						const char *addr_str =
+						    inet_ntop(AF_INET, &addr,
+							      addr_str_buf,
+							      INET_ADDRSTRLEN);
+						if (addr_str != NULL) {
+							log_debug(
+							    "send",
+							    "send_packet succeeded for %s.",
+							    addr_str);
+						}
 						break;
 					}
 				}
@@ -707,8 +717,6 @@ int send_run_separate(sock_t st, shard_t *s)
 				idx &= 0xFF;
 			}
 			s->state.packets_sent++;
-			// Track the number of hosts we actually scanned.
-			s->state.hosts_scanned++;
 
 			// Get the next IP to scan
 			current_ip = shard_get_next_ip(s);
