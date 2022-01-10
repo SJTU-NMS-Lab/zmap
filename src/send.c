@@ -631,7 +631,7 @@ int send_run_separate(sock_t st, shard_t *s)
 				    s->thread_id, s->state.max_hosts);
 				goto cleanup;
 			}
-			if (current_ip == ZMAP_SHARD_DONE) {			// BUG
+			if (current_ip == ZMAP_SHARD_DONE) {
 				log_debug(
 				    "send",
 				    "send thread %hhu finished, shard depleted",

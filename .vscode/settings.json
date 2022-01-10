@@ -29,6 +29,8 @@
 		"type_traits": "cpp",
 		"typeinfo": "cpp",
 		"array": "cpp",
-		"bitset": "c"
+		"bitset": "c",
+		"atomic": "c",
+		"cstdint": "c"
 	}
 }
