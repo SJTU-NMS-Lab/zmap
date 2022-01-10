@@ -112,6 +112,11 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	shard->cb = cb;
 	shard->arg = arg;
 
+	shard->params.packet_streams = zconf.packet_streams;
+	shard->packet_stream = shard->params.packet_streams;
+	shard->params.round = (uint64_t)(zconf.packet_streams_interval * ((float)zconf.rate / (float)zconf.senders));		// DEBUG
+	shard->round_count = shard->params.round;
+
 	// If the beginning of a shard isn't pointing to a valid index in the
 	// blocklist, find the first element that is.
 	shard_roll_to_valid(shard);
@@ -127,6 +132,7 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 uint32_t shard_get_cur_ip(shard_t *shard)
 {
+	shard->round_count --;
 	return (uint32_t)blocklist_lookup_index(shard->current - 1);
 }
 
@@ -139,13 +145,39 @@ static inline uint32_t shard_get_next_elem(shard_t *shard)
 	return (uint32_t)shard->current;
 }
 
+static inline uint32_t shard_get_next_elem_by_round(shard_t *shard)
+{
+	if (shard->round_count == 0) {
+		shard->round_count = shard->params.round;
+		shard->packet_stream --;
+		if (shard->packet_stream == 0) {
+			do {
+				shard->current *= shard->params.factor;
+				shard->current %= shard->params.modulus;
+			} while (shard->current >= (1LL << 32));
+
+			shard->packet_stream = shard->params.packet_streams;
+			shard->params.first = shard->current;
+		} else {
+			shard->current = shard->params.first;
+		}
+	} else {
+		do {
+			shard->current *= shard->params.factor;
+			shard->current %= shard->params.modulus;
+		} while (shard->current >= (1LL << 32));
+	}
+
+	return (uint32_t)shard->current;
+}
+
 uint32_t shard_get_next_ip(shard_t *shard)
 {
 	if (shard->current == ZMAP_SHARD_DONE) {
 		return ZMAP_SHARD_DONE;
 	}
 	while (1) {
-		uint32_t candidate = shard_get_next_elem(shard);
+		uint32_t candidate = shard_get_next_elem_by_round(shard);
 		if (candidate == shard->params.last) {
 			shard->current = ZMAP_SHARD_DONE;
 			shard->iterations++;
@@ -158,6 +190,7 @@ uint32_t shard_get_next_ip(shard_t *shard)
 			/* modified */
 			uint32_t retval = blocklist_lookup_index(candidate - 1);
 			if ((htonl(retval)&0xFF) == 1) {
+				shard->round_count --;
 				return retval;
 			}
 			// return retval;

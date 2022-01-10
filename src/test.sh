@@ -40,15 +40,16 @@
 #log_file="$path/log_$which"
 #sudo ./zmap 	-w allowlist -r $rate -P 5 --batch=5	-p 1434 -M udp --probe-args=hex:02 -u $log_file --output-file=$output_file --output-module=csv --output-fields="saddr,icmp_timestamp,icmp_elapsed,icmp_rtt" --metadata-file=metadata
 
-rate=3000
-per_ip=4
+rate=1000
+per_ip=3
+interval=1
 batch=1
-which=2
-path="/home/qi/Documents/asfinder/data_0104"
+which=0
+path="/home/qi/Documents/probing/output"
 output_file="$path/rtt_$which"
 log_file="$path/log_$which"
 error_file="$path/error_$which"
-sudo ./zmap 	-w allowlist -M udp --probe-args=latency:00 -r $rate -P $per_ip --batch=$batch	-p 1434 -u $log_file --output-file=$output_file --output-module=csv --output-fields="icmp_responder,saddr,icmp_type,icmp_code,icmp_timestamp,icmp_elapsed,icmp_rtt,icmp_subnet,icmp_subnet_len,icmp_next_digit" --metadata-file=metadata > $error_file
+sudo ./zmap 	-w allowlist -M udp --probe-args=latency:00 -r $rate -P $per_ip -g $interval --batch=$batch	-p 1434 -u $log_file --output-file=$output_file --output-module=csv --output-fields="icmp_responder,saddr,icmp_type,icmp_code,icmp_timestamp,icmp_elapsed,icmp_rtt,icmp_subnet,icmp_subnet_len,icmp_next_digit" --metadata-file=metadata > $error_file
 
 
 

@@ -12,6 +12,21 @@
 		"includes.h": "c",
 		"module_udp.h": "c",
 		"fieldset.h": "c",
-		"constraint.h": "c"
+		"constraint.h": "c",
+		"send.h": "c",
+		"unordered_map": "cpp",
+		"memory_resource": "cpp",
+		"algorithm": "cpp",
+		"functional": "cpp",
+		"memory": "cpp",
+		"random": "cpp",
+		"fstream": "cpp",
+		"initializer_list": "cpp",
+		"numeric": "cpp",
+		"streambuf": "cpp",
+		"tuple": "cpp",
+		"utility": "cpp",
+		"type_traits": "cpp",
+		"typeinfo": "cpp"
 	}
 }
