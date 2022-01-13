@@ -215,6 +215,9 @@ void fs_add_null_icmp(fieldset_t *fs)
 	fs_add_null(fs, "icmp_timestamp");
 	fs_add_null(fs, "icmp_elapsed");
 	fs_add_null(fs, "icmp_rtt");
+	fs_add_null(fs, "icmp_subnet");
+	fs_add_null(fs, "icmp_subnet_len");
+	fs_add_null(fs, "icmp_next_digit");
 	fs_add_null(fs, "icmp_unreach_str");
 }
 
@@ -236,6 +239,9 @@ void fs_add_failure_no_port(fieldset_t *fs)
 	fs_add_null(fs, "icmp_timestamp");
 	fs_add_null(fs, "icmp_elapsed");
 	fs_add_null(fs, "icmp_rtt");
+	fs_add_null(fs, "icmp_subnet");
+	fs_add_null(fs, "icmp_subnet_len");
+	fs_add_null(fs, "icmp_next_digit");
 	fs_add_null(fs, "icmp_unreach_str");
 }
 
