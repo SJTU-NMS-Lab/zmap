@@ -549,9 +549,6 @@ int send_run_separate(sock_t st, shard_t *s)
 	}
 	// Get the initial IP to scan.
 	uint32_t current_ip = shard_get_cur_ip(s);
-	struct in_addr addr;
-	addr.s_addr = current_ip;
-	log_debug("send.c", "1 th ip to scan: %s", inet_ntoa(addr));
 
 	// If provided a list of IPs to scan, then the first generated address
 	// might not be on that list. Iterate until the current IP is one the
@@ -623,32 +620,6 @@ int send_run_separate(sock_t st, shard_t *s)
 		for (int b = 0; b < zconf.batch; b++) { // batch specify how many ip addresses to probe between two adjusting points
 			// Check if we've finished this shard or thread before sending each
 			// packet, regardless of batch size.
-			if (packet_stream >= zconf.packet_streams) {
-				packet_stream = 0;
-				// Track the number of hosts we actually scanned.
-				s->state.hosts_scanned++;
-
-				// Get the next IP to scan
-				current_ip = shard_get_next_ip(s);
-				if (zconf.list_of_ips_filename &&
-				current_ip != ZMAP_SHARD_DONE) {
-					// If we have a list of IPs bitmap, ensure the next IP
-					// to scan is on the list.
-					while (!pbm_check(zsend.list_of_ips_pbm,
-							current_ip)) {
-						current_ip = shard_get_next_ip(s);
-						if (current_ip == ZMAP_SHARD_DONE) {
-							log_debug(
-							"send",
-							"send thread %hhu shard finished in get_next_ip_loop depleted",
-							s->thread_id);
-							goto cleanup;
-						}
-					}
-				}
-				addr.s_addr = current_ip;
-				log_debug("send.c", "%d th ip to scan: %s", (s->state.hosts_scanned + 1), inet_ntoa(addr));
-			}
 			if (s->state.max_hosts &&
 			    s->state.hosts_scanned >= s->state.max_hosts) {
 				log_debug(
