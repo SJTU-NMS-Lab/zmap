@@ -56,6 +56,10 @@ option "probes"                 P "Number of probes to send to each IP"
     typestr="n"
     default="1"
     optional int
+option "probe-interval"         g "Interval between two probes to one IP are sent"
+    typestr="t"
+    default="10"
+    optional float
 option "cooldown-time"          c "How long to continue receiving after sending last probe"
     typestr="secs"
     default="8"

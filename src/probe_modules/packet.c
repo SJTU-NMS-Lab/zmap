@@ -215,6 +215,9 @@ void fs_add_null_icmp(fieldset_t *fs)
 	fs_add_null(fs, "icmp_timestamp");
 	fs_add_null(fs, "icmp_elapsed");
 	fs_add_null(fs, "icmp_rtt");
+	fs_add_null(fs, "icmp_subnet");
+	fs_add_null(fs, "icmp_subnet_len");
+	fs_add_null(fs, "icmp_next_digit");
 	fs_add_null(fs, "icmp_unreach_str");
 }
 
@@ -236,6 +239,9 @@ void fs_add_failure_no_port(fieldset_t *fs)
 	fs_add_null(fs, "icmp_timestamp");
 	fs_add_null(fs, "icmp_elapsed");
 	fs_add_null(fs, "icmp_rtt");
+	fs_add_null(fs, "icmp_subnet");
+	fs_add_null(fs, "icmp_subnet_len");
+	fs_add_null(fs, "icmp_next_digit");
 	fs_add_null(fs, "icmp_unreach_str");
 }
 
@@ -269,7 +275,7 @@ void fs_populate_icmp_from_iphdr_latency(struct ip *ip, size_t len, fieldset_t *
 	struct icmp *icmp = get_icmp_header(ip, len);
 	assert(icmp);
 	struct ip *ip_inner = get_inner_ip_header(icmp, len);
-	fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);			// que: where free the retval of make_ip_str?
+	fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
 	fs_add_string(fs, "icmp_responder", make_ip_str(ip->ip_src.s_addr), 1);
 	fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
 	fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
@@ -280,19 +286,17 @@ void fs_populate_icmp_from_iphdr_latency(struct ip *ip, size_t len, fieldset_t *
 			struct udphdr *udp_header = (struct udphdr *) ((char *)ip_inner + 4 * ip_inner->ip_hl);
 			// printf("received sport %d; dport: %d; len %d; cksum %d; \n", udp_header->uh_sport, udp_header->uh_dport, udp_header->uh_ulen, udp_header->uh_sum);
 			int timestamp = udp_header->uh_sum;
-			int payloadlen = ntohs(udp_header->uh_ulen) - (uint16_t)sizeof(struct udphdr);
-			if (payloadlen > 0) {
-				timestamp += (payloadlen - 0) << 16;
-			}
+			// int carry = 65535 - ntohs(udp_header->uh_dport);
+			// timestamp += (carry << 16);
 			int elapsed = 
 				(int)((ts.tv_sec - zsend.starting.tv_sec) * 10000 + (ts.tv_nsec / 1000 - zsend.starting.tv_usec)/100);		// accuracy: 0.1 millisecond
 			//int elapsed = 
 			//	(int)((ts.tv_sec - zsend.starting.tv_sec) * 1000 + (ts.tv_nsec / 1000 - zsend.starting.tv_usec)/1000);		// accuracy: 1 millisecond
 			int rtt = 0;
 			if (elapsed >= timestamp) {
-				rtt = elapsed - timestamp;
+				rtt = (elapsed - timestamp) % 65536;
 			} else if (udp_header->uh_sum== 0xffff) {
-				timestamp = (payloadlen - 2 ) << 16;
+				timestamp -= 65536;
 				rtt = elapsed - timestamp;
 			} else {
 				printf("Elapsed less than timestamp: %s; %d;%d;%d;\n", make_ip_str(ip_inner->ip_dst.s_addr), timestamp, elapsed, rtt);	
