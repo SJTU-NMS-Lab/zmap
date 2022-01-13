@@ -40,3 +40,4 @@ src/compact_BGP_table
 src/server_results*
 .vscode/
 src/metadata
+src/udp_alive
