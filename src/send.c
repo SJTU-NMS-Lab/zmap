@@ -577,11 +577,8 @@ int send_run_separate(sock_t st, shard_t *s)
 				sleep_time *= ((last_rate / send_rate) + 1) / 2;
 				ts.tv_sec = sleep_time / nsec_per_sec;
 				ts.tv_nsec = sleep_time % nsec_per_sec;
-				log_debug("sleep",
-					  "sleep for %d sec, %ld nanoseconds",
-					  ts.tv_sec, ts.tv_nsec);
-				while (nanosleep(&ts, &rem) == -1) {
-				}
+				// log_debug("sleep", "sleep for %d sec, %ld nanoseconds", ts.tv_sec, ts.tv_nsec);
+				while (nanosleep(&ts, &rem) == -1) {}
 				last_time = t;
 			} else {
 				for (vi = delay; vi--;)
