@@ -478,7 +478,6 @@ void constraint_paint_value_alive_ip(constraint_t *con, value_t value)
 	// Paint everything, nothing to put in radix
 	_count_ips_recurse_alive_ip(con->root, value, 1);
 
-	log_debug("constraint", "%lu IPs in tree", con->root->count);
 	con->painted = 1;
 	con->paint_value = value;
 }

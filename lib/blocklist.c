@@ -405,7 +405,7 @@ int blocklist_init_with_alive_ips(char *allowlist_filename, char *blocklist_file
 		init_from_array(blocklist_entries, blocklist_entries_len,
 				ADDR_DISALLOWED, ignore_invalid_hosts);
 	}
-	init_from_string(strdup("0.0.0.0"), ADDR_DISALLOWED);		// TODO: usage?
+	// init_from_string(strdup("0.0.0.0"), ADDR_DISALLOWED);		// TODO: usage?
 	constraint_paint_value_alive_ip(constraint, ADDR_ALLOWED);
 	uint64_t allowed = blocklist_count_alive_ips();
 	log_debug("constraint",

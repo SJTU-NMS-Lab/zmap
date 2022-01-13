@@ -40,14 +40,14 @@
 #log_file="$path/log_$which"
 #sudo ./zmap 	-w allowlist -r $rate -P 5 --batch=5	-p 1434 -M udp --probe-args=hex:02 -u $log_file --output-file=$output_file --output-module=csv --output-fields="saddr,icmp_timestamp,icmp_elapsed,icmp_rtt" --metadata-file=metadata
 
-rate=1000
-per_ip=3
+rate=100
+per_ip=2
 batch=1
 interval=15
 coolTime=15
 sender_threads=1
 
-which=50
+which=51
 path="/home/qi/Documents/output"
 output_file="$path/rtt_$which"
 status_file="$path/status_$which"
@@ -55,7 +55,7 @@ log_file="$path/log_$which"
 error_file="$path/error_$which"
 metadata_file="$path/metadata_$which"
 
-sudo ./zmap 	  -a union_40_43 -w allowlist -M udp --probe-args=latency:0000 -r $rate -P $per_ip -g $interval --batch=$batch -c $coolTime -p 65535 --sender_threads=$sender_threads	-l $log_file -u $status_file --output-file=$output_file --output-module=csv --output-fields="icmp_responder,saddr,icmp_type,icmp_code,icmp_timestamp,icmp_elapsed,icmp_rtt,icmp_subnet,icmp_subnet_len,icmp_next_digit" --metadata-file=$metadata_file > $error_file
+sudo ./zmap 	  -v 5 -a union_40_43 -w allowlist -M udp --probe-args=latency:0000 -r $rate -P $per_ip -g $interval --batch=$batch -c $coolTime -p 65535 --sender-threads=$sender_threads	-l $log_file -u $status_file --output-file=$output_file --output-module=csv --output-fields="icmp_responder,saddr,icmp_type,icmp_code,icmp_timestamp,icmp_elapsed,icmp_rtt,icmp_subnet,icmp_subnet_len,icmp_next_digit" --metadata-file=$metadata_file > $error_file
 
 
 
