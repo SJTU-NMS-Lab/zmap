@@ -42,17 +42,17 @@
 
 rate=500
 per_ip=3
-interval=2
+interval=5
 batch=1
-which=1
+
+which=30
 path="/home/qi/Documents/output"
 output_file="$path/rtt_$which"
 status_file="$path/status_$which"
 log_file="$path/log_$which"
 error_file="$path/error_$which"
-sudo ./zmap 	-v 5 -w allowlist -M udp --probe-args=latency:00 -r $rate -P $per_ip -g $interval --batch=$batch	-p 1434 -l $log_file -u $status_file --output-file=$output_file --output-module=csv --output-fields="icmp_responder,saddr,icmp_type,icmp_code,icmp_timestamp,icmp_elapsed,icmp_rtt,icmp_subnet,icmp_subnet_len,icmp_next_digit" --metadata-file=metadata > $error_file
 
-
+sudo ./zmap 	-w allowlist -M udp --probe-args=latency:0000 -r $rate -P $per_ip -g $interval --batch=$batch	-p 65535 -l $log_file -u $status_file --output-file=$output_file --output-module=csv --output-fields="icmp_responder,saddr,icmp_type,icmp_code,icmp_timestamp,icmp_elapsed,icmp_rtt,icmp_subnet,icmp_subnet_len,icmp_next_digit" --metadata-file=metadata > $error_file
 
 
 
