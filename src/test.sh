@@ -46,6 +46,7 @@ batch=1
 which=0
 path="/home/qi/Documents/output"
 output_file="$path/rtt_$which"
+status_file="$path/status_$which"
 log_file="$path/log_$which"
 error_file="$path/error_$which"
 metadata="$path/metadata_$which"

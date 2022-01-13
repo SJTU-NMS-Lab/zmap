@@ -104,7 +104,7 @@ static int check_coprime(uint64_t check, const cyclic_group_t *group)
 }
 
 // Return a (random) number coprime with (p - 1) of the group,
-// which is a generator of the additive group mod (p - 1)
+// which is a generator of the additive group mod (p - 1)	// BUG: should be multiplicative group?
 static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 {
 	uint32_t candidate =
@@ -120,7 +120,7 @@ static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 	// the largest group, we have a very low probability of ever executing this
 	// loop more than once, and for small groups it will only execute once.
 	do {
-		// Find an element that is coprime in the additive group
+		// Find an element that is coprime in the additive group	// BUG: should be multiplicative group?
 		while (check_coprime(candidate, group) != COPRIME) {
 			candidate += 1;
 			candidate %= group->prime;
@@ -162,7 +162,7 @@ uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t *mult_group)
 	mpz_init_set_ui(prime, mult_group->prime);
 	mpz_init(primroot);
 	mpz_powm(primroot, base, power, prime);
-	uint64_t retv = (uint64_t)mpz_get_ui(primroot);
+	uint64_t retv = (uint64_t)mpz_get_ui(primroot);		// BUG: but return type uint_32?
 	log_debug("zmap", "Isomorphism: %llu", retv);
 	mpz_clear(base);
 	mpz_clear(power);

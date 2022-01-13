@@ -11,15 +11,27 @@
 
 #include <gmp.h>
 
+#include "../lib/logger.h"
 #include "../lib/includes.h"
 #include "../lib/blocklist.h"
 #include "shard.h"
 #include "state.h"
 
+inline unsigned int filter(uint32_t ip){
+	// return 1;		// enable all ips
+	return ((htonl(ip)&0xFF) == 1);			// enable a.b.c.1 ips
+}
+
 static uint32_t shard_roll_to_valid(shard_t *s)
 {
 	if (s->current - 1 < zsend.max_index) {
-		return s->current;
+		s->state.hosts_allowlisted++;			// BUG?
+		s->iterations++;
+		uint32_t retval = blocklist_lookup_index(s->current - 1);
+		if (filter(retval)) {
+			s->round_count --;
+			return retval;
+		}
 	}
 	return shard_get_next_ip(s);
 }
@@ -112,6 +124,12 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	shard->cb = cb;
 	shard->arg = arg;
 
+	shard->params.packet_streams = zconf.packet_streams;
+	shard->packet_stream = shard->params.packet_streams;
+	shard->params.round = (uint64_t)(zconf.packet_streams_interval * ((float)zconf.rate / (float)zconf.senders));		// DEBUG
+	shard->round_count = shard->params.round;
+	log_debug("shard", "initiation: round: %ld; per_ip: %ld;\n", shard->params.round, shard->params.packet_streams);		// BUG: first last are the same; solution: roll the first to avoid this situation
+
 	// If the beginning of a shard isn't pointing to a valid index in the
 	// blocklist, find the first element that is.
 	shard_roll_to_valid(shard);
@@ -145,19 +163,43 @@ uint32_t shard_get_next_ip(shard_t *shard)
 		return ZMAP_SHARD_DONE;
 	}
 	while (1) {
-		uint32_t candidate = shard_get_next_elem(shard);
+		if (shard->round_count == 0) {
+			shard->round_count = shard->params.round;
+			shard->packet_stream --;
+			if (shard->packet_stream == 0) {
+				shard_get_next_elem(shard);
+				shard->state.hosts_scanned += shard->params.round;
+				shard->packet_stream = shard->params.packet_streams;
+				shard->params.first = shard->current;
+			} else {
+				shard->current = shard->params.first;
+				return shard_roll_to_valid(shard);
+			}
+		} else {
+			shard_get_next_elem(shard);
+		}
+
+		uint32_t candidate = shard->current;
 		if (candidate == shard->params.last) {
-			shard->current = ZMAP_SHARD_DONE;
-			shard->iterations++;
-			return ZMAP_SHARD_DONE;
+			shard->round_count = shard->params.round;
+			shard->packet_stream --;
+			if (shard->packet_stream == 0) {
+				shard->current = ZMAP_SHARD_DONE;
+				shard->iterations++;
+				return ZMAP_SHARD_DONE;
+			} else {
+				shard->current = shard->params.first;
+				return shard_roll_to_valid(shard);
+			}
 		}
 		if (candidate - 1 < zsend.max_index) {
-			shard->state.hosts_allowlisted++;
-			shard->iterations++;
-			// return blocklist_lookup_index(candidate - 1);
-			/* modified */
 			uint32_t retval = blocklist_lookup_index(candidate - 1);
-			return retval;
+			if (filter(retval)) {
+				shard->iterations++;
+				shard->state.hosts_allowlisted++;
+				shard->round_count --;
+				return retval;
+			}
 		}
 		shard->state.hosts_blocklisted++;
 	}
