@@ -79,6 +79,7 @@ struct state_conf {
 	uint16_t shard_num;
 	uint16_t total_shards;
 	int packet_streams;
+	float packet_streams_interval;
 	struct probe_module *probe_module;
 	char *output_module_name;
 	struct output_module *output_module;

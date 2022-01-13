@@ -378,7 +378,7 @@ int udp_make_latency_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
 
-	char *payload = (char *)&udp_header[1];			// unused
+	char *payload = (char *)&udp_header[1];
 
 	/* calculate sending time */
 	struct timeval current;
@@ -388,12 +388,15 @@ int udp_make_latency_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	// uint32_t diff = 
 	//	(int)((current.tv_sec - zsend.starting.tv_sec) * 1000 + (current.tv_usec - zsend.starting.tv_usec)/1000);	// count in 1 millisecond
 
-	/* fill in payloadlen */
-	int payload_len = 0;
-	if (diff >> 16) 
-		payload_len += (diff>>16);
+	/* fill in uh_dport */
+	// udp_header->uh_dport = htons(65535 - (diff>>16));
+	static uint16_t cyclic_ele = 1;
+	cyclic_ele = (cyclic_ele * 11) % 16381;
+	udp_header->uh_dport = htons(49152 + cyclic_ele);
+	// udp_header->uh_dport = htons(33434);
 
 	/* Update the IP and UDP headers to match the new payload length */
+	int payload_len = 2;
 	ip_header->ip_len = htons(sizeof(struct ip) + sizeof(struct udphdr) + payload_len);
 	ip_header->ip_off = ntohs(IP_DF);
 	udp_header->uh_ulen = htons(sizeof(struct udphdr) + payload_len);
@@ -402,13 +405,15 @@ int udp_make_latency_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
 	/* compute UDP checksum */
+	memset(payload, 0, 2);
 	u_short udp_packet_len = sizeof(struct udphdr) + payload_len;
-	udp_header->uh_dport= 0;
 	udp_header->uh_sum = 0;
 	udp_header->uh_sum= p_cksum(ip_header, (u_short *) udp_header, udp_packet_len);
+
 	uint16_t crafted_cksum = diff & 0xFFFF;
 	uint16_t crafted_data = compute_data(udp_header->uh_sum, crafted_cksum);
-	udp_header->uh_dport= crafted_data ;
+
+	memcpy(payload, &crafted_data, 2);
 	if (crafted_cksum == 0x0000)
 		crafted_cksum = 0xFFFF;
 	udp_header->uh_sum= crafted_cksum;
@@ -955,6 +960,6 @@ probe_module_t module_udp = {
 		"optionally be templated based on destination host. Specify "
 		"packet file with --probe-args=file:/path_to_packet_file "
 		"and templates with template:/path_to_template_file, "
-		"or latency:00 to run latency detecting module.",
+		"or latency:0000 to run latency detecting module.",
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};

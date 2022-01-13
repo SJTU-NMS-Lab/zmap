@@ -33,8 +33,14 @@ typedef struct shard {
 		uint64_t last;
 		uint64_t factor;
 		uint64_t modulus;
+
+		uint64_t round;
+		int packet_streams;
 	} params;
+	int packet_stream;
+	uint64_t round_count;
 	uint64_t current;
+
 	uint64_t iterations;
 	uint8_t thread_id;
 	shard_complete_cb cb;
@@ -48,5 +54,6 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 uint32_t shard_get_cur_ip(shard_t *shard);
 uint32_t shard_get_next_ip(shard_t *shard);
+uint32_t shard_get_next_ip_by_round(shard_t *shard);
 
 #endif /* ZMAP_SHARD_H */
