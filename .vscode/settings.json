@@ -12,6 +12,8 @@
 		"includes.h": "c",
 		"module_udp.h": "c",
 		"fieldset.h": "c",
-		"constraint.h": "c"
+		"constraint.h": "c",
+		"iterator": "cpp",
+		"random": "cpp"
 	}
 }

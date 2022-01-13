@@ -389,7 +389,10 @@ int udp_make_latency_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	//	(int)((current.tv_sec - zsend.starting.tv_sec) * 1000 + (current.tv_usec - zsend.starting.tv_usec)/1000);	// count in 1 millisecond
 
 	/* fill in uh_dport */
-	udp_header->uh_dport = htons(65535 - (diff>>16));
+	// udp_header->uh_dport = htons(65535 - (diff>>16));
+	static uint16_t cyclic_ele = 1;
+	cyclic_ele = (cyclic_ele * 11) % 16381;
+	udp_header->uh_dport = htons(49152 + cyclic_ele);
 
 	/* Update the IP and UDP headers to match the new payload length */
 	int payload_len = 2;

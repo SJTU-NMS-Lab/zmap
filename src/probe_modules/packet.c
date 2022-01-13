@@ -280,17 +280,17 @@ void fs_populate_icmp_from_iphdr_latency(struct ip *ip, size_t len, fieldset_t *
 			struct udphdr *udp_header = (struct udphdr *) ((char *)ip_inner + 4 * ip_inner->ip_hl);
 			// printf("received sport %d; dport: %d; len %d; cksum %d; \n", udp_header->uh_sport, udp_header->uh_dport, udp_header->uh_ulen, udp_header->uh_sum);
 			int timestamp = udp_header->uh_sum;
-			int carry = 65535 - ntohs(udp_header->uh_dport);
-			timestamp += (carry << 16);
+			// int carry = 65535 - ntohs(udp_header->uh_dport);
+			// timestamp += (carry << 16);
 			int elapsed = 
 				(int)((ts.tv_sec - zsend.starting.tv_sec) * 10000 + (ts.tv_nsec / 1000 - zsend.starting.tv_usec)/100);		// accuracy: 0.1 millisecond
 			//int elapsed = 
 			//	(int)((ts.tv_sec - zsend.starting.tv_sec) * 1000 + (ts.tv_nsec / 1000 - zsend.starting.tv_usec)/1000);		// accuracy: 1 millisecond
 			int rtt = 0;
 			if (elapsed >= timestamp) {
-				rtt = elapsed - timestamp;
+				rtt = (elapsed - timestamp) % 65536;
 			} else if (udp_header->uh_sum== 0xffff) {
-				timestamp = (carry - 2 ) << 16;
+				timestamp -= 65536;
 				rtt = elapsed - timestamp;
 			} else {
 				printf("Elapsed less than timestamp: %s; %d;%d;%d;\n", make_ip_str(ip_inner->ip_dst.s_addr), timestamp, elapsed, rtt);	
