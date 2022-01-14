@@ -213,9 +213,9 @@ static void _add_recurse_alive_ip(node_t *node, uint32_t prefix, int len, value_
 			node->alive_len ++;
 			node->alive = xrealloc(node->alive, (sizeof(uint32_t) * node->alive_len));	// TODO: instead of realloc 1 uint32_t every times the list gets larger, realloc a block of memory every time
 			node->alive[(node->alive_len - 1)] = prefix;
-			log_debug("constraint", "succeed to add alive ip %s at alive_len %d", inet_ntoa(addr), node->alive_len);
+			// log_debug("constraint", "succeed to add alive ip %s at alive_len %d", inet_ntoa(addr), node->alive_len);
 		} else {
-			log_debug("constraint", "fail to add alive ip %s", inet_ntoa(addr));
+			// log_debug("constraint", "fail to add alive ip %s", inet_ntoa(addr));
 		}
 		return;
 	}

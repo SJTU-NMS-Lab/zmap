@@ -688,24 +688,7 @@ int send_run_separate(sock_t st, shard_t *s)
 							    addr_str,
 							    strerror(errno));
 						}
-					} else {
-						any_sends_successful = 1;
-						struct in_addr addr;
-						addr.s_addr = current_ip;
-						char addr_str_buf
-						    [INET_ADDRSTRLEN];
-						const char *addr_str =
-						    inet_ntop(AF_INET, &addr,
-							      addr_str_buf,
-							      INET_ADDRSTRLEN);
-						if (addr_str != NULL) {
-							log_debug(
-							    "send",
-							    "send_packet succeeded for %s.",
-							    addr_str);
-						}
-						break;
-					}
+					} 
 				}
 				if (!any_sends_successful) {
 					s->state.packets_failed++;
