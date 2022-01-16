@@ -520,10 +520,12 @@ int send_run_separate(sock_t st, shard_t *s)
 	double last_time = now();
 	uint32_t delay = 0;
 	int interval = 0;
+	int speed_varying_interval = 0;
 	volatile int vi;
 	struct timespec ts, rem;
 	double send_rate =
 	    (double)zconf.rate / ((double)zconf.senders * zconf.batch);
+	double thread_rate = (double)zconf.rate / (double)zconf.senders;
 	const double slow_rate = 50; // packets per seconds per thread
 	// at which it uses the slow methods
 	long nsec_per_sec = 1000 * 1000 * 1000;
@@ -544,6 +546,7 @@ int send_run_separate(sock_t st, shard_t *s)
 			interval = ((double)zconf.rate /
 				    ((double)zconf.senders * zconf.batch)) /
 				   20;
+			speed_varying_interval = 5 * ((double)zconf.rate / ((double)zconf.senders * zconf.batch));
 			last_time = now();
 		}
 	}
@@ -591,7 +594,7 @@ int send_run_separate(sock_t st, shard_t *s)
 					double multiplier =
 					    (double)(count - last_count) /
 					    (t - last_time) /
-					    (zconf.rate / zconf.senders);
+					    (thread_rate);
 					uint32_t old_delay = delay;
 					delay *= multiplier;
 					if (delay == old_delay) {
@@ -603,6 +606,9 @@ int send_run_separate(sock_t st, shard_t *s)
 					}
 					last_count = count;
 					last_time = t;
+					if (!interval || (count % speed_varying_interval == 0)) {
+						thread_rate *= 1.2;
+					}
 				}
 			}
 		}
