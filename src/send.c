@@ -516,6 +516,7 @@ int send_run_separate(sock_t st, shard_t *s)
 
 	// adaptive timing to hit target rate
 	uint64_t count = 0;
+	uint64_t speed_varying_count = 0;
 	uint64_t last_count = count;
 	double last_time = now();
 	uint32_t delay = 0;
@@ -525,9 +526,8 @@ int send_run_separate(sock_t st, shard_t *s)
 	struct timespec ts, rem;
 	double send_rate =
 	    (double)zconf.rate / ((double)zconf.senders * zconf.batch);
-	double thread_rate = (double)zconf.rate / (double)zconf.senders;
-	const double slow_rate = 50; // packets per seconds per thread
-	// at which it uses the slow methods
+	double fast_rate = (double)zconf.rate / (double)zconf.senders;
+	const double slow_rate = 50;
 	long nsec_per_sec = 1000 * 1000 * 1000;
 	long long sleep_time = nsec_per_sec;
 	if (zconf.rate > 0) {
@@ -580,13 +580,13 @@ int send_run_separate(sock_t st, shard_t *s)
 				sleep_time *= ((last_rate / send_rate) + 1) / 2;
 				ts.tv_sec = sleep_time / nsec_per_sec;
 				ts.tv_nsec = sleep_time % nsec_per_sec;
-				// log_debug("sleep", "sleep for %d sec, %ld nanoseconds", ts.tv_sec, ts.tv_nsec);
+				log_debug("sleep", "sleep for %d sec, %ld nanoseconds", ts.tv_sec, ts.tv_nsec);
 				while (nanosleep(&ts, &rem) == -1) {}
 				last_time = t;
 			} else {
 				for (vi = delay; vi--;)
 					;
-				if ((!interval || (count % interval == 0)) &&
+				if ((!interval || (speed_varying_count % interval == 0)) &&
 				    (count > last_count)) {
 					double t = now();
 					assert(count > last_count);
@@ -594,7 +594,7 @@ int send_run_separate(sock_t st, shard_t *s)
 					double multiplier =
 					    (double)(count - last_count) /
 					    (t - last_time) /
-					    (thread_rate);
+					    (fast_rate);
 					uint32_t old_delay = delay;
 					delay *= multiplier;
 					if (delay == old_delay) {
@@ -606,9 +606,13 @@ int send_run_separate(sock_t st, shard_t *s)
 					}
 					last_count = count;
 					last_time = t;
-					if (!interval || (count % speed_varying_interval == 0)) {
-						thread_rate *= 1.2;
-					}
+				}
+				if ((!speed_varying_interval || (speed_varying_count % speed_varying_interval == 0)) && (speed_varying_count > 0)) {
+					speed_varying_count = 0;
+					speed_varying_interval *= 1.2;
+					interval *= 1.2;
+					fast_rate *= 1.2;
+					log_debug("send", "rate increased to %f", fast_rate);
 				}
 			}
 		}
@@ -650,6 +654,7 @@ int send_run_separate(sock_t st, shard_t *s)
 				goto cleanup;
 			}
 			count++;
+			speed_varying_count++;
 			uint32_t src_ip = get_src_ip(current_ip, 0);
 			uint32_t validation[VALIDATE_BYTES / sizeof(uint32_t)];
 			validate_gen(src_ip, current_ip, (uint8_t *)validation);
