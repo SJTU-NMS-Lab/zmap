@@ -522,6 +522,7 @@ int send_run_separate(sock_t st, shard_t *s)
 	uint32_t delay = 0;
 	int interval = 0;
 	int speed_varying_interval = 0;
+	float increasing_rate = zconf.increasing_rate;
 	volatile int vi;
 	struct timespec ts, rem;
 	double send_rate =
@@ -607,11 +608,11 @@ int send_run_separate(sock_t st, shard_t *s)
 					last_count = count;
 					last_time = t;
 				}
-				if ((!speed_varying_interval || (speed_varying_count % speed_varying_interval == 0)) && (speed_varying_count > 0)) {
+				if (speed_varying_interval && (speed_varying_count % speed_varying_interval == 0)) {
 					speed_varying_count = 0;
-					speed_varying_interval *= 1.2;
-					interval *= 1.2;
-					fast_rate *= 1.2;
+					speed_varying_interval *= increasing_rate;
+					interval *= increasing_rate;
+					fast_rate *= increasing_rate;
 					log_debug("send", "rate increased to %f", fast_rate);
 				}
 			}
@@ -655,6 +656,7 @@ int send_run_separate(sock_t st, shard_t *s)
 			}
 			count++;
 			speed_varying_count++;
+
 			uint32_t src_ip = get_src_ip(current_ip, 0);
 			uint32_t validation[VALIDATE_BYTES / sizeof(uint32_t)];
 			validate_gen(src_ip, current_ip, (uint8_t *)validation);

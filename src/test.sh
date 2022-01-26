@@ -42,6 +42,7 @@
 
 #-w allowlist
 rate=1000
+increasing_rate=1.5
 per_ip=100000
 interval=0
 batch=1
