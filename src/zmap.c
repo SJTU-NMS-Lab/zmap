@@ -597,6 +597,7 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.max_results, max_results);
 	SET_IF_GIVEN(zconf.rate, rate);
 	SET_IF_GIVEN(zconf.increasing_rate, increasing_rate);
+	SET_IF_GIVEN(zconf.increasing_interval, increasing_interval);
 	SET_IF_GIVEN(zconf.packet_streams, probes);
 	SET_IF_GIVEN(zconf.packet_streams_interval, probe_interval);
 	SET_IF_GIVEN(zconf.status_updates_file, status_updates_file);

@@ -58,6 +58,7 @@ struct state_conf {
 	// that the sender will maintain
 	int rate;
 	float increasing_rate;
+	float increasing_interval;
 	// rate in bits per second
 	uint64_t bandwidth;
 	// how many seconds after the termination of the sender will the

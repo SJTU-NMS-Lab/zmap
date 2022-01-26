@@ -547,7 +547,7 @@ int send_run_separate(sock_t st, shard_t *s)
 			interval = ((double)zconf.rate /
 				    ((double)zconf.senders * zconf.batch)) /
 				   20;
-			speed_varying_interval = 5 * ((double)zconf.rate / ((double)zconf.senders * zconf.batch));
+			speed_varying_interval = zconf.increasing_interval * ((double)zconf.rate / ((double)zconf.senders * zconf.batch));
 			last_time = now();
 		}
 	}

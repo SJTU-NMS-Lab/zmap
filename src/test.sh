@@ -41,9 +41,10 @@
 #sudo ./zmap 	-w allowlist -r $rate -P 5 --batch=5	-p 1434 -M udp --probe-args=hex:02 -u $log_file --output-file=$output_file --output-module=csv --output-fields="saddr,icmp_timestamp,icmp_elapsed,icmp_rtt" --metadata-file=metadata
 
 #-w allowlist
-rate=1000
+rate=100
 increasing_rate=1.5
-per_ip=100000
+increasing_interval=8
+per_ip=1000000
 interval=0
 batch=1
 coolTime=10
@@ -57,7 +58,7 @@ log_file="$path/log_$which"
 error_file="$path/error_$which"
 metadata_file="$path/metadata_$which"
 
-sudo ./zmap 	-b blocklist -v 5 -w allowlist -M udp --probe-args=latency:0000 -r $rate -P $per_ip -g $interval --batch=$batch -c $coolTime -p 65535 --sender-threads=$sender_threads	 -l $log_file -u $status_file --output-file=$output_file --output-module=csv --output-fields="icmp_responder,saddr,icmp_type,icmp_code,icmp_timestamp,icmp_elapsed,icmp_rtt,icmp_subnet,icmp_subnet_len,icmp_next_digit" --metadata-file=$metadata_file > $error_file
+sudo ./zmap 	-b blocklist -v 5 -w allowlist -M udp --probe-args=latency:0000 -r $rate --increasing-rate=$increasing_rate --increasing-interval=$increasing_interval -P $per_ip -g $interval --batch=$batch -c $coolTime -p 65535 --sender-threads=$sender_threads	 -l $log_file -u $status_file --output-file=$output_file --output-module=csv --output-fields="icmp_responder,saddr,icmp_type,icmp_code,icmp_timestamp,icmp_elapsed,icmp_rtt,icmp_subnet,icmp_subnet_len,icmp_next_digit" --metadata-file=$metadata_file > $error_file
 
 
 

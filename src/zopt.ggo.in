@@ -34,8 +34,11 @@ section "Scan Options"
 option "rate"                   r "Set send rate in packets/sec"
     typestr="pps"
     optional int
-option "increasing-rate"        - "Increase the rate by n times every 5 seconds"
+option "increasing-rate"        - "Increase the rate by n times every several seconds"
     typestr="times"
+    optional float
+option "increasing-interval"        - "Increase the rate by several times every n seconds"
+    typestr="secs"
     optional float
 option "bandwidth"              B "Set send rate in bits/second (supports suffixes G, M and K)"
     typestr="bps"
