@@ -18,8 +18,8 @@
 #include "state.h"
 
 inline unsigned int filter(uint32_t ip){
-	// return 1;		// enable all ips
-	return ((htonl(ip)&0xFF) == 1);			// enable a.b.c.1 ips
+	return 1;		// enable all ips
+	// return ((htonl(ip)&0xFF) == 1);			// enable a.b.c.1 ips
 }
 
 static uint32_t shard_roll_to_valid(shard_t *s)
