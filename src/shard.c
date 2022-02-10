@@ -126,9 +126,13 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 	shard->params.packet_streams = zconf.packet_streams;
 	shard->packet_stream = shard->params.packet_streams;
-	shard->params.round = (uint64_t)(zconf.packet_streams_interval * ((float)zconf.rate / (float)zconf.senders));		// DEBUG
+	if (zconf.packet_streams_interval == 0) {
+		shard->params.round = 0xFFFFFFFFFFFFFFFF;
+	} else {
+		shard->params.round = (uint64_t)(zconf.packet_streams_interval * ((float)zconf.rate / (float)zconf.senders));
+	}
 	shard->round_count = shard->params.round;
-	log_debug("shard", "initiation: round: %ld; per_ip: %ld;\n", shard->params.round, shard->params.packet_streams);		// BUG: first last are the same; solution: roll the first to avoid this situation
+	log_debug("shard", "initiation: round: %ld; per_ip: %ld;\n", shard->params.round, shard->params.packet_streams);
 
 	// If the beginning of a shard isn't pointing to a valid index in the
 	// blocklist, find the first element that is.
