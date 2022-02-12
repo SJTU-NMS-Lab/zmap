@@ -41,15 +41,15 @@
 #sudo ./zmap 	-w allowlist -r $rate -P 5 --batch=5	-p 1434 -M udp --probe-args=hex:02 -u $log_file --output-file=$output_file --output-module=csv --output-fields="saddr,icmp_timestamp,icmp_elapsed,icmp_rtt" --metadata-file=metadata
 
 #-w allowlist
-rate=1000
-per_ip=120
+rate=100000
+per_ip=1200
 interval=0
 batch=1
 coolTime=15
-sender_threads=1
+sender_threads=4
 
-which=32
-path="/home/qi/Documents/asfinder/data_0210"
+which=21
+path="/home/qi/Documents/asfinder/data_0212"
 output_file="$path/rtt_$which"
 status_file="$path/status_$which"
 log_file="$path/log_$which"
