@@ -34,10 +34,14 @@ typedef struct shard {
 		uint64_t factor;
 		uint64_t modulus;
 
+		/*
 		uint64_t round;
 		int packet_streams;
+		*/
 	} params;
+	/*
 	int packet_stream;
+	*/
 	uint64_t round_count;
 	uint64_t current;
 

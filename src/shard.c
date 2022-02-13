@@ -25,6 +25,12 @@ inline unsigned int filter(uint32_t ip){
 static uint32_t shard_roll_to_valid(shard_t *s)
 {
 	if (s->current - 1 < zsend.max_index) {
+		return s->current;
+	}
+	return shard_get_next_ip(s);
+
+	/*
+	if (s->current - 1 < zsend.max_index) {
 		s->state.hosts_allowlisted++;			// BUG?
 		s->iterations++;
 		uint32_t retval = blocklist_lookup_index(s->current - 1);
@@ -34,6 +40,7 @@ static uint32_t shard_roll_to_valid(shard_t *s)
 		}
 	}
 	return shard_get_next_ip(s);
+	*/
 }
 
 void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
@@ -124,6 +131,8 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	shard->cb = cb;
 	shard->arg = arg;
 
+	shard->round_count = zconf.packet_streams;
+	/*
 	shard->params.packet_streams = zconf.packet_streams;
 	shard->packet_stream = shard->params.packet_streams;
 	if (zconf.packet_streams_interval == 0) {
@@ -133,6 +142,7 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	}
 	shard->round_count = shard->params.round;
 	log_debug("shard", "initiation: round: %ld; per_ip: %ld;\n", shard->params.round, shard->params.packet_streams);
+	*/
 
 	// If the beginning of a shard isn't pointing to a valid index in the
 	// blocklist, find the first element that is.
@@ -161,12 +171,22 @@ static inline uint32_t shard_get_next_elem(shard_t *shard)
 	return (uint32_t)shard->current;
 }
 
+static inline uint32_t shard_get_next_elem_seq(shard_t *shard)
+{
+	do {
+		shard->current += 1;
+		shard->current %= shard->params.modulus;
+	} while (shard->current >= (1LL << 32));
+	return (uint32_t)shard->current;
+}
+
 uint32_t shard_get_next_ip(shard_t *shard)
 {
 	if (shard->current == ZMAP_SHARD_DONE) {
 		return ZMAP_SHARD_DONE;
 	}
 	while (1) {
+		/*
 		if (shard->round_count == 0) {
 			shard->round_count = shard->params.round;
 			shard->packet_stream --;
@@ -204,6 +224,23 @@ uint32_t shard_get_next_ip(shard_t *shard)
 				shard->round_count --;
 				return retval;
 			}
+		}
+		shard->state.hosts_blocklisted++;
+		*/
+		uint32_t candidate = shard_get_next_elem_seq(shard);
+		if (candidate == shard->params.last) {
+			if (shard->round_count == 0) {
+				shard->current = ZMAP_SHARD_DONE;
+				shard->iterations++;
+				return ZMAP_SHARD_DONE;
+			} else {
+				shard->round_count --;
+			}
+		}
+		if (candidate - 1 < zsend.max_index) {
+			shard->state.hosts_allowlisted++;
+			shard->iterations++;
+			return blocklist_lookup_index(candidate - 1);
 		}
 		shard->state.hosts_blocklisted++;
 	}
